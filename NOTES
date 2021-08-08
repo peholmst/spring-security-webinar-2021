@@ -1,0 +1,14 @@
+Wed Aug 4:
+- How are new mailboxes registered? Whenever a user logs in or by an admin?
+- How do you look up users when adding new mailboxes or giving rights to a mailbox?
+- How do you look up the name of the user for showing it in the UI? The UUID does not say anything.
+
+
+Thu Aug 5:
+- Users coming from the looking service have empty IDs. Need to fix that.
+- Add some debug logging to make it easier to see what is happening.
+- Make sure you can send and receive messages
+- Show a notification if you receive a message in any of the mailboxes that you can read
+- Add dialog for granting and revoking access
+- Implement logout
+- Prepare talk

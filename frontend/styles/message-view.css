@@ -1,0 +1,17 @@
+.message-subject {
+    font-size: var(--lumo-font-size-xxl);
+}
+
+.message-sender {
+    font-size: var(--lumo-font-size-l);
+}
+
+.message-recipient {
+    font-size: var(--lumo-font-size-m);
+}
+
+.message-body {
+    border: 1px solid gray;
+    padding: var(--lumo-space-m);
+    overflow: auto;
+}
