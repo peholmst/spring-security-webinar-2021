@@ -9,6 +9,8 @@ import org.springframework.security.access.annotation.Secured;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.vaadin.webinar.security.sampleapp.domain.*;
 import org.vaadin.webinar.security.sampleapp.security.Roles;
 
@@ -59,7 +61,13 @@ public class MessageCompositionService {
         log.debug("Sending message from [{}] to [{}]", sender, recipient);
         var message = new Message(senderMbox, recipientMbox, subject, htmlSanitizer.sanitize(body), clock.instant());
         messageRepository.saveAndFlush(message);
-        applicationEventPublisher.publishEvent(new MessageSentEvent(message));
+        // Fire the event after the transaction has committed.
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                applicationEventPublisher.publishEvent(new MessageSentEvent(MessageCompositionService.this, clock, message));
+            }
+        });
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)

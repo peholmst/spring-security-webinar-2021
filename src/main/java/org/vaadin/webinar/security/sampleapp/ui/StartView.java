@@ -3,12 +3,11 @@ package org.vaadin.webinar.security.sampleapp.ui;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
-import org.vaadin.webinar.security.sampleapp.security.Roles;
 
-import javax.annotation.security.RolesAllowed;
+import javax.annotation.security.PermitAll;
 
 @Route(value = "", layout = MainAppLayout.class)
-@RolesAllowed({Roles.USER, Roles.ADMIN})
+@PermitAll
 public class StartView extends VerticalLayout {
 
     public StartView() {

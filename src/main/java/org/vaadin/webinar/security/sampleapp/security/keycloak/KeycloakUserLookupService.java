@@ -10,10 +10,9 @@ import org.springframework.lang.Nullable;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.oauth2.client.AuthorizedClientServiceReactiveOAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.InMemoryReactiveOAuth2AuthorizedClientService;
-import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.InMemoryReactiveClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.reactive.function.client.ServerOAuth2AuthorizedClientExchangeFilterFunction;
-import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -35,22 +34,14 @@ class KeycloakUserLookupService implements UserLookupService {
     private final WebClient client;
     private final String restApiUri;
 
-    KeycloakUserLookupService(@Value("${spring.security.oauth2.client.provider.keycloak.token-uri}") String token_uri,
-                              @Value("${spring.security.oauth2.client.registration.keycloak.client-id}") String client_id,
-                              @Value("${spring.security.oauth2.client.registration.keycloak.client-secret}") String client_secret,
+    KeycloakUserLookupService(ClientRegistrationRepository clientRegistrationRepository,
                               @Value("${keycloak.rest-api-uri}") String restApiUri) {
-        var clientRegistration = ClientRegistration
-                .withRegistrationId("keycloak")
-                .tokenUri(token_uri)
-                .clientId(client_id)
-                .clientSecret(client_secret)
-                .authorizationGrantType(new AuthorizationGrantType("client_credentials"))
-                .build();
+        var clientRegistration = clientRegistrationRepository.findByRegistrationId("keycloak-rest");
         var clients = new InMemoryReactiveClientRegistrationRepository(clientRegistration);
         var clientService = new InMemoryReactiveOAuth2AuthorizedClientService(clients);
         var clientManager = new AuthorizedClientServiceReactiveOAuth2AuthorizedClientManager(clients, clientService);
         var oauth2 = new ServerOAuth2AuthorizedClientExchangeFilterFunction(clientManager);
-        oauth2.setDefaultClientRegistrationId("keycloak");
+        oauth2.setDefaultClientRegistrationId(clientRegistration.getRegistrationId());
         client = WebClient.builder().filter(oauth2).build();
         this.restApiUri = restApiUri;
     }

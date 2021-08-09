@@ -1,5 +1,7 @@
 package org.vaadin.webinar.security.sampleapp.ui;
 
+import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.grid.Grid;
@@ -9,6 +11,7 @@ import com.vaadin.flow.component.treegrid.TreeGrid;
 import com.vaadin.flow.data.renderer.TextRenderer;
 import com.vaadin.flow.data.selection.SelectionEvent;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.shared.Registration;
 import org.vaadin.webinar.security.sampleapp.domain.Folder;
 import org.vaadin.webinar.security.sampleapp.domain.Mailbox;
 import org.vaadin.webinar.security.sampleapp.domain.MailboxReference;
@@ -43,15 +46,19 @@ public class MessageListView extends SplitLayout {
     private final Button manageAccess;
     private final TreeGrid<TreeNode> mailboxes;
     private final Button compose;
+    private final MessageSentTopic messageSentTopic;
+    private Registration topicRegistration;
 
     public MessageListView(CurrentSession currentSession,
                            MessageReadService service,
                            UserLookupService userLookupService,
-                           MailboxAccessManagementService mailboxAccessManagementService) {
+                           MailboxAccessManagementService mailboxAccessManagementService,
+                           MessageSentTopic messageSentTopic) {
         this.currentSession = currentSession;
         this.service = service;
         this.userLookupService = userLookupService;
         this.mailboxAccessManagementService = mailboxAccessManagementService;
+        this.messageSentTopic = messageSentTopic;
 
         mailboxes = new TreeGrid<>();
         mailboxes.setSizeFull();
@@ -87,12 +94,16 @@ public class MessageListView extends SplitLayout {
     }
 
     private void onMailboxSelected(SelectionEvent<Grid<TreeNode>, TreeNode> event) {
-        messages.setItems(event.getFirstSelectedItem()
+        refreshMessages();
+        manageAccess.setEnabled(event.getFirstSelectedItem().filter(t -> t.getMailbox().isOwner(currentSession.currentUser())).isPresent());
+        compose.setEnabled(event.getFirstSelectedItem().filter(t -> t.getMailbox().hasPermission(currentSession.currentUser(), Mailbox.Permission.WRITE)).isPresent());
+    }
+
+    private void refreshMessages() {
+        messages.setItems(mailboxes.getSelectionModel().getFirstSelectedItem()
                 .filter(TreeNode::isFolder)
                 .map(node -> service.getMessages(new MailboxReference(node.getMailbox()), node.getFolder()))
                 .orElse(Collections.emptyList()));
-        manageAccess.setEnabled(event.getFirstSelectedItem().filter(t -> t.getMailbox().isOwner(currentSession.currentUser())).isPresent());
-        compose.setEnabled(event.getFirstSelectedItem().filter(t -> t.getMailbox().hasPermission(currentSession.currentUser(), Mailbox.Permission.WRITE)).isPresent());
     }
 
     private String formatTimestamp(Instant instant) {
@@ -112,6 +123,20 @@ public class MessageListView extends SplitLayout {
 
     private void onComposeClicked() {
         getUI().ifPresent(ui -> ui.navigate(ComposeMessageView.class, mailboxes.getSelectionModel().getFirstSelectedItem().map(t -> t.getMailbox().getId()).orElse(null)));
+    }
+
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        topicRegistration = messageSentTopic.subscribe(event -> mailboxes.getSelectionModel().getFirstSelectedItem().ifPresent(node -> {
+            if (node.getMailbox().equals(event.getMessage().getRecipient())) {
+                getUI().ifPresent(ui -> ui.access(this::refreshMessages));
+            }
+        }));
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        topicRegistration.remove();
     }
 
     public static abstract class TreeNode {

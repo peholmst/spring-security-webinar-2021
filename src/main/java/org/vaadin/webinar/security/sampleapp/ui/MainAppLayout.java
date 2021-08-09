@@ -14,20 +14,18 @@ import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.router.RouterLink;
 import org.vaadin.webinar.security.sampleapp.security.Roles;
+import org.vaadin.webinar.security.sampleapp.security.vaadin.LogoutUtil;
 import org.vaadin.webinar.security.sampleapp.service.CurrentSession;
 import org.vaadin.webinar.security.sampleapp.service.UserInfo;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 @CssImport("./styles/main-app-layout.css")
 public class MainAppLayout extends AppLayout {
 
-    private final Map<Tab, Class<? extends Component>> tabViewMap = new HashMap<>();
     private final Tabs tabs;
 
-    public MainAppLayout(CurrentSession currentSession) {
+    public MainAppLayout(CurrentSession currentSession, LogoutUtil logoutUtil) {
         var currentUser = new Div(new Text(currentSession.getCurrentUser().map(UserInfo::getFullName).orElse("")));
         currentUser.addClassName("current-user");
         tabs = new Tabs();
@@ -40,7 +38,7 @@ public class MainAppLayout extends AppLayout {
             tabs.add(createTabForView("Manage Mailboxes", MailboxAdminView.class));
         }
 
-        var logout = new Button("Logout");
+        var logout = new Button("Logout", evt -> logoutUtil.logout());
         logout.addThemeVariants(ButtonVariant.LUMO_SMALL);
         var layout = new HorizontalLayout(currentUser, tabs, logout);
         layout.setWidthFull();
